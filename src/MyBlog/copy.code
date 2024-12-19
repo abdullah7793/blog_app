@@ -1,0 +1,241 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { FaFacebook } from "react-icons/fa";
+import { FaPlusCircle } from "react-icons/fa";
+
+const Modal = ({ isOpen, onClose, onSubmit, formData, setFormData }) => {
+  if (!isOpen) return null;
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
+        <h2 className="text-xl font-bold mb-4">Add New Post</h2>
+        <form onSubmit={onSubmit}>
+          <div className="mb-4">
+            <label className="block mb-1">Name:</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-1">Country:</label>
+            <input
+              type="text"
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-1">Age:</label>
+            <input
+              type="number"
+              name="age"
+              value={formData.age}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-1">Image URL:</label>
+            <input
+              type="url"
+              name="imageUrl"
+              value={formData.imageUrl}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-1">Description:</label>
+            <textarea
+              name="description"
+              rows="3"
+              value={formData.description}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            ></textarea>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="bg-gray-300 px-4 py-2 rounded mr-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const Display = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    country: "",
+    age: "",
+    description: "",
+    imageUrl: "",
+  });
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:3002/posts")
+      .then((response) => {
+        setPosts(response.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  const openModal = () => setModalOpen(true);
+  const closeModal = () => setModalOpen(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        "http://localhost:3002/posts",
+        formData
+      );
+      setPosts((prevPosts) => [...prevPosts, response.data]);
+      setFormData({
+        name: "",
+        country: "",
+        age: "",
+        description: "",
+        imageUrl: "",
+      });
+      closeModal();
+    } catch (error) {
+      console.error("Error adding post:", error);
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div className="relative flex flex-col min-h-screen">
+      <header className="bg-gray-200 text-black p-4 shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">My Blog</h1>
+          <nav>
+            <ul className="flex space-x-6">
+              <li>
+                <a href="#home" className="hover:text-blue-500">
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="#about" className="hover:text-blue-500">
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="#contact" className="hover:text-blue-500">
+                  Contact
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+
+      <div className="fixed top-60 right-20 transform -translate-y-1/2 bg-blue-500 text-white p-8 w-72 rounded-lg">
+        <h2 className="text-2xl font-bold">About the Author</h2>
+        <p className="mt-2 text-m">
+          "Hello, I'm Abdullah Nafees. Welcome to my blog, where I share stories
+          of individuals who have strived to change the world through their
+          remarkable efforts. Here, you'll discover fascinating insights about
+          renowned scientists and their groundbreaking contributions."
+        </p>
+      </div>
+
+      <main className="flex-1 flex flex-col items-center gap-20 pt-20 pb-10">
+        {posts.map((post) => (
+          <div
+            key={post.id}
+            className="bg-white p-4 rounded-lg shadow-lg w-1/3 flex flex-col items-center"
+          >
+            <img
+              src={post.imageUrl || "https://via.placeholder.com/150"}
+              alt={post.name}
+              className="w-full h-64 object-cover rounded mb-4"
+            />
+            <h2 className="text-lg font-bold">{post.name}</h2>
+            <p>
+              <b>Country:</b> {post.country}
+            </p>
+            <p>
+              <b>Age:</b> {post.age}
+            </p>
+            <p>
+              <b>Description:</b> {post.description}
+            </p>
+          </div>
+        ))}
+      </main>
+
+      <FaPlusCircle
+        onClick={openModal} // Keep the same functionality
+        className="fixed bottom-20 right-10 text-blue-500 text-6xl cursor-pointer hover:text-blue-700" // Style the icon like the button
+      />
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+        formData={formData}
+        setFormData={setFormData}
+      />
+
+      <footer className="fixed bottom-0 left-0 w-full bg-gray-800 text-white p-4">
+        <div className="flex justify-between items-center">
+          <p>&copy; {new Date().getFullYear()} My Blog. All Rights Reserved.</p>
+          <div className="flex space-x-4">
+            <a
+              href="https://www.facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FaFacebook className="text-2xl hover:text-blue-600" />
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default Display;

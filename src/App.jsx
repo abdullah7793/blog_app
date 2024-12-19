@@ -1,9 +1,4 @@
-import { useState } from "react";
-import axios from "axios";
 import Display from "./MyBlog/display.jsx";
-import PostData from "./JSON/data.jsx";
-import Header from "./MyBlog/header.jsx";
-import Footer from "./MyBlog/footer.jsx";
 import "./index.css";
 
 function App() {

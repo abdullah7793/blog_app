@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FaFacebook, FaPlusCircle } from "react-icons/fa";
+import { FaPlusCircle } from "react-icons/fa";
+import { useState, useEffect } from "react";
 
 const Modal = ({ isOpen, onClose, onSubmit, formData, setFormData }) => {
   if (!isOpen) return null;
@@ -125,7 +125,11 @@ const Display = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const newPost = { ...formData, comments: [] };
+      const newPost = {
+        ...formData,
+        comments: [],
+        createdAt: new Date().toISOString(),
+      };
       const response = await axios.post("http://localhost:3002/posts", newPost);
       setPosts((prevPosts) => [...prevPosts, response.data]);
       setFormData({
@@ -150,9 +154,10 @@ const Display = () => {
 
     const post = posts.find((p) => p.id === postId);
 
+    // Format the comment's date using the formatDate function
     const updatedComments = [
       ...post.comments,
-      { text: newComment, date: new Date().toLocaleString() },
+      { text: newComment, date: formatDate(new Date()) },
     ];
 
     try {
@@ -169,6 +174,43 @@ const Display = () => {
       setNewComment("");
     } catch (error) {
       console.error("Error adding comment:", error);
+    }
+  };
+
+  const getInitialsAvatar = (name) => {
+    const initials = name
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+    return (
+      <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full text-sm font-bold">
+        {initials}
+      </div>
+    );
+  };
+
+  const formatDate = (createdAt) => {
+    const now = new Date();
+    const createdDate = new Date(createdAt);
+    const timeDifference = now - createdDate;
+
+    // Check if the time difference is less than 24 hours (86400000 ms = 24 hours)
+    if (timeDifference < 86400000) {
+      const hours = Math.floor(timeDifference / 3600000); // Hours difference
+      const minutes = Math.floor((timeDifference % 3600000) / 60000); // Minutes difference
+
+      // Show "X hours ago" or "X minutes ago"
+      if (hours > 0) {
+        return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+      } else if (minutes > 0) {
+        return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+      } else {
+        return "Just now"; // If less than a minute
+      }
+    } else {
+      // Return the date in YYYY-MM-DD format if more than 24 hours
+      return createdDate.toLocaleDateString();
     }
   };
 
@@ -200,6 +242,13 @@ const Display = () => {
             key={post.id}
             className="bg-white p-4 rounded-lg shadow-lg w-1/3 flex flex-col items-center"
           >
+            <div className="flex items-center w-full mb-4">
+              {getInitialsAvatar("Abdullah Nafees")}
+              <div className="ml-2 text-gray-600 text-sm">
+                <div className="font-semibold">Abdullah Nafees</div>
+                <div>{formatDate(post.createdAt)}</div>
+              </div>
+            </div>
             <img
               src={post.imageUrl || "https://via.placeholder.com/150"}
               alt={post.name}

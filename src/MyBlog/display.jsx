@@ -1,5 +1,5 @@
 import axios from "axios";
-import { FaPlusCircle } from "react-icons/fa";
+import { FaPlusCircle, FaTrash, FaEdit } from "react-icons/fa";
 import { useState, useEffect } from "react";
 
 const Modal = ({ isOpen, onClose, onSubmit, formData, setFormData }) => {
@@ -13,7 +13,7 @@ const Modal = ({ isOpen, onClose, onSubmit, formData, setFormData }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-        <h2 className="text-xl font-bold mb-4">Add New Post</h2>
+        <h2 className="text-xl font-bold mb-4">Add/Edit Post</h2>
         <form onSubmit={onSubmit}>
           <div className="mb-4">
             <label className="block mb-1">Name:</label>
@@ -103,8 +103,10 @@ const Display = () => {
     description: "",
     imageUrl: "",
   });
-
   const [newComment, setNewComment] = useState("");
+  const [visibleComments, setVisibleComments] = useState({});
+  const [deletePostData, setDeletePostData] = useState(null);
+  const [editPostData, setEditPostData] = useState(null);
 
   useEffect(() => {
     axios
@@ -145,6 +147,30 @@ const Display = () => {
     }
   };
 
+  const handleDelete = async (postId) => {
+    try {
+      await axios.delete(`http://localhost:3002/posts/${postId}`);
+      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+      setDeletePostData(null); // Close the deletion confirmation modal
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
+
+  const openDeleteConfirmation = (post) => {
+    setDeletePostData(post);
+  };
+
+  const closeDeleteConfirmation = () => {
+    setDeletePostData(null);
+  };
+
+  const handleEdit = (post) => {
+    setFormData(post);
+    setEditPostData(post);
+    setModalOpen(true);
+  };
+
   const handleCommentChange = (e) => {
     setNewComment(e.target.value);
   };
@@ -153,8 +179,6 @@ const Display = () => {
     if (newComment.trim() === "") return;
 
     const post = posts.find((p) => p.id === postId);
-
-    // Format the comment's date using the formatDate function
     const updatedComments = [
       ...post.comments,
       { text: newComment, date: formatDate(new Date()) },
@@ -177,6 +201,13 @@ const Display = () => {
     }
   };
 
+  const toggleComments = (postId) => {
+    setVisibleComments((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }));
+  };
+
   const getInitialsAvatar = (name) => {
     const initials = name
       .split(" ")
@@ -195,21 +226,17 @@ const Display = () => {
     const createdDate = new Date(createdAt);
     const timeDifference = now - createdDate;
 
-    // Check if the time difference is less than 24 hours (86400000 ms = 24 hours)
     if (timeDifference < 86400000) {
-      const hours = Math.floor(timeDifference / 3600000); // Hours difference
-      const minutes = Math.floor((timeDifference % 3600000) / 60000); // Minutes difference
-
-      // Show "X hours ago" or "X minutes ago"
+      const hours = Math.floor(timeDifference / 3600000);
+      const minutes = Math.floor((timeDifference % 3600000) / 60000);
       if (hours > 0) {
         return `${hours} hour${hours > 1 ? "s" : ""} ago`;
       } else if (minutes > 0) {
         return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
       } else {
-        return "Just now"; // If less than a minute
+        return "Just now";
       }
     } else {
-      // Return the date in YYYY-MM-DD format if more than 24 hours
       return createdDate.toLocaleDateString();
     }
   };
@@ -225,14 +252,13 @@ const Display = () => {
         </div>
       </header>
 
-      {/* About the Author Section */}
       <div className="fixed top-60 right-20 transform -translate-y-1/2 bg-blue-500 text-white p-8 w-72 rounded-lg">
         <h2 className="text-xl font-bold">About the Author</h2>
-        <p className="mt-2 text-sm">
-          "Hello, I'm Abdullah Nafees. Welcome to my blog, where I share stories
-          of individuals who have strived to change the world through their
-          remarkable efforts. Here, you'll discover fascinating insights about
-          renowned scientists and their groundbreaking contributions."
+        <p className="mt-2 text-m">
+          "Greetings, I am Abdullah Nafees. Welcome to my blog, a platform
+          dedicated to chronicling the extraordinary endeavors of individuals
+          who have profoundly impacted the world through their remarkable
+          achievements."
         </p>
       </div>
 
@@ -240,7 +266,7 @@ const Display = () => {
         {posts.map((post) => (
           <div
             key={post.id}
-            className="bg-white p-4 rounded-lg shadow-lg w-1/3 flex flex-col items-center"
+            className="bg-white p-4 rounded-lg shadow-lg w-1/3 flex flex-col items-center relative"
           >
             <div className="flex items-center w-full mb-4">
               {getInitialsAvatar("Abdullah Nafees")}
@@ -266,45 +292,95 @@ const Display = () => {
             </p>
 
             <div className="w-full mt-4">
-              <h3 className="text-lg font-semibold">Comments</h3>
-              <div className="border-t pt-2">
-                {post.comments && post.comments.length > 0 ? (
-                  post.comments.map((comment, index) => (
-                    <div key={index} className="mt-2">
-                      <p>{comment.text}</p>
-                      <span className="text-gray-500 text-sm">
-                        {comment.date}
-                      </span>
+              <h3 className="text-lg font-semibold text-blue-600 cursor-pointer text-center">
+                <span onClick={() => toggleComments(post.id)}> Comment</span>
+              </h3>
+              <div
+                className={`transition-all duration-500 overflow-hidden ${
+                  visibleComments[post.id] ? "max-h-96" : "max-h-0"
+                }`}
+              >
+                {visibleComments[post.id] && (
+                  <div className="mt-4">
+                    {post.comments && post.comments.length > 0 ? (
+                      post.comments.map((comment, index) => (
+                        <div key={index} className="mt-2">
+                          <p>{comment.text}</p>
+                          <span className="text-gray-500 text-sm">
+                            {comment.date}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No comments yet.</p>
+                    )}
+                    <textarea
+                      className="w-full mt-4 p-2 border rounded"
+                      rows="3"
+                      placeholder="Write a comment..."
+                      value={newComment}
+                      onChange={handleCommentChange}
+                    />
+                    <div className="flex justify-center w-full mt-2">
+                      <button
+                        className="bg-blue-500 text-white p-2 rounded"
+                        onClick={() => handleAddComment(post.id)}
+                      >
+                        Add Comment
+                      </button>
                     </div>
-                  ))
-                ) : (
-                  <p>No comments yet.</p>
+                  </div>
                 )}
-
-                <textarea
-                  className="w-full mt-4 p-2 border rounded"
-                  rows="3"
-                  placeholder="Write a comment..."
-                  value={newComment}
-                  onChange={handleCommentChange}
-                />
-                <button
-                  className="bg-blue-500 text-white p-2 rounded mt-2"
-                  onClick={() => handleAddComment(post.id)}
-                >
-                  Add Comment
-                </button>
               </div>
+            </div>
+
+            {/* Edit and Delete Icons */}
+            <div className="absolute top-5 right-4 flex space-x-2">
+              <FaEdit
+                onClick={() => handleEdit(post)}
+                className="edit-icon text-blue-500 cursor-pointer text-l"
+              />
+              <FaTrash
+                onClick={() => openDeleteConfirmation(post)}
+                className="delete-icon text-red-500 cursor-pointer text-l"
+              />
             </div>
           </div>
         ))}
       </main>
 
+      {/* Deletion Confirmation Modal */}
+      {deletePostData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
+            <h2 className="text-xl font-bold mb-4">
+              Are you sure you want to delete the post: "{deletePostData.name}"?
+            </h2>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={closeDeleteConfirmation}
+                className="bg-gray-300 px-4 py-2 rounded mr-2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deletePostData.id)}
+                className="bg-red-500 text-white px-4 py-2 rounded"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Post Button */}
       <FaPlusCircle
         onClick={openModal}
         className="fixed bottom-20 right-10 text-blue-500 text-6xl cursor-pointer hover:text-blue-700"
       />
 
+      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -312,10 +388,6 @@ const Display = () => {
         formData={formData}
         setFormData={setFormData}
       />
-
-      <footer className="fixed bottom-0 left-0 w-full bg-gray-800 text-white p-4">
-        <p>&copy; {new Date().getFullYear()} My Blog. All Rights Reserved.</p>
-      </footer>
     </div>
   );
 };

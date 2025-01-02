@@ -1,43 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FaSearch, FaMicrophone } from "react-icons/fa";
 
 const Header = ({ handleSearch, searchTerm }) => {
   const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   const handleMicrophoneClick = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!recognitionRef.current) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = false;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.lang = "en-US";
+        recognitionRef.current.interimResults = false;
 
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
+        recognitionRef.current.onstart = () => {
+          setIsListening(true);
+        };
 
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("Recognized speech:", transcript);
+        recognitionRef.current.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          const searchInput = document.querySelector("input[type='text']");
+          if (searchInput) {
+            searchInput.value = transcript;
+          }
+          console.log("Recognized speech:", transcript);
 
-        handleSearch(transcript);
-        setIsListening(false);
-      };
+          handleSearch(transcript);
+          setIsListening(false);
+          recognitionRef.current.stop(); 
+        };
 
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
+        recognitionRef.current.onerror = () => {
+          setIsListening(false);
+          recognitionRef.current.stop(); 
+        };
 
-      recognition.onend = () => {
-        setIsListening(false);
-      };
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+          recognitionRef.current = null; 
+        };
+      } else {
+        alert("Speech recognition is not supported in this browser.");
+        return;
+      }
+    }
 
-      recognition.start();
-
-      console.log("");
-    } else {
-      alert("Speech recognition is not supported in this browser.");
+    if (!isListening) {
+      recognitionRef.current.start(); // Start recognition if not already listening
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FaSearch, FaMicrophone } from "react-icons/fa";
 
-const Header = ({ handleSearch }) => {
+const Header = ({ handleSearch, searchTerm }) => {
   const [isListening, setIsListening] = useState(false);
 
   const handleMicrophoneClick = () => {
@@ -52,6 +52,7 @@ const Header = ({ handleSearch }) => {
               type="text"
               placeholder="Search..."
               className="outline-none bg-transparent text-gray-700 w-full"
+              value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
             />
             <button

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 
 const CommentSection = ({
@@ -21,7 +20,7 @@ const CommentSection = ({
         className="text-lg font-semibold text-blue-600 cursor-pointer text-center"
         onClick={() => toggleComments(postId)}
       >
-        {visibleComments ? "Comments" : "Comments"}
+        {visibleComments ? "Comment" : "Comment"}
       </h3>
       {visibleComments && (
         <div className="mt-4">

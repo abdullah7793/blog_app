@@ -15,6 +15,7 @@ const Display = () => {
   const [editingPostId, setEditingPostId] = useState(null);
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [filteredPosts, setFilteredPosts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -47,6 +48,7 @@ const Display = () => {
     term === "" || term === null || term === undefined
       ? setFilteredPosts(posts)
       : setFilteredPosts(filtered);
+    setSearchTerm(term);
   };
 
   const openModal = () => setModalOpen(true);
@@ -178,7 +180,7 @@ const Display = () => {
 
   return (
     <>
-      <Header handleSearch={handleSearch} />
+      <Header handleSearch={handleSearch} searchTerm={searchTerm} />
 
       <AuthorInfo />
 

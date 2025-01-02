@@ -171,17 +171,6 @@
       "resourceType": "image",
       "comments": [],
       "createdAt": "2025-01-02T09:11:25.152Z"
-    },
-    {
-      "id": "b807",
-      "name": "abdullah",
-      "country": "Pakistan ",
-      "age": "29",
-      "description": "Hello ",
-      "imageUrl": "https://res.cloudinary.com/dbu0viebl/image/upload/v1735809345/yvzagicl7dyyfy8q2k9d.jpg",
-      "resourceType": "image",
-      "comments": [],
-      "createdAt": "2025-01-02T09:12:43.665Z"
     }
   ]
 }

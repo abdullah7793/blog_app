@@ -40,7 +40,7 @@ const Footer = () => {
         <ul className="flex space-x-4">
           <li>
             <a href="#about" className="hover:text-gray-400">
-              Information
+              Informations
             </a>
           </li>
           <li>

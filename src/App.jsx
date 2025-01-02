@@ -1,6 +1,5 @@
 import Display from "./MyBlog/display.jsx";
 import "./index.css";
-
 function App() {
   return (
     <>

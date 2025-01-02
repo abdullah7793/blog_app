@@ -1,101 +1,21 @@
 import axios from "axios";
 import { FaPlusCircle, FaTrash, FaEdit } from "react-icons/fa";
 import { useState, useEffect } from "react";
-
-const Modal = ({ isOpen, onClose, onSubmit, formData, setFormData }) => {
-  if (!isOpen) return null;
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-        <h2 className="text-xl font-bold mb-4">Add/Edit Post</h2>
-        <form onSubmit={onSubmit}>
-          <div className="mb-4">
-            <label className="block mb-1">Name:</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-1">Country:</label>
-            <input
-              type="text"
-              name="country"
-              value={formData.country}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-1">Age:</label>
-            <input
-              type="number"
-              name="age"
-              value={formData.age}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-1">Image URL:</label>
-            <input
-              type="url"
-              name="imageUrl"
-              value={formData.imageUrl}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-1">Description:</label>
-            <textarea
-              name="description"
-              rows="3"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded"
-            ></textarea>
-          </div>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-gray-300 px-4 py-2 rounded mr-2"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Submit
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
+import Modal from "./Modal";
+import Footer from "./footer.jsx";
+import Header from "./header.jsx";
+import AuthorInfo from "./Authorinfo.jsx";
+import CommentSection from "./Comment.jsx";
 const Display = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setModalOpen] = useState(false);
+  const [deletePostData, setDeletePostData] = useState(null);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
+  const [filteredPosts, setFilteredPosts] = useState([]);
+
   const [formData, setFormData] = useState({
     name: "",
     country: "",
@@ -103,16 +23,12 @@ const Display = () => {
     description: "",
     imageUrl: "",
   });
-  const [newComment, setNewComment] = useState("");
-  const [visibleComments, setVisibleComments] = useState({});
-  const [deletePostData, setDeletePostData] = useState(null);
-  const [editPostData, setEditPostData] = useState(null);
-
   useEffect(() => {
     axios
       .get("http://localhost:3002/posts")
       .then((response) => {
         setPosts(response.data);
+        if (!filteredPosts.length) setFilteredPosts(response.data);
         setLoading(false);
       })
       .catch((err) => {
@@ -121,19 +37,51 @@ const Display = () => {
       });
   }, []);
 
+  const handleSearch = (term) => {
+    const lowercasedTerm = term.toLowerCase();
+    const filtered = posts.filter(
+      (post) =>
+        post.name.toLowerCase().includes(lowercasedTerm) ||
+        post.country.toLowerCase().includes(lowercasedTerm)
+    );
+    term === "" || term === null || term === undefined
+      ? setFilteredPosts(posts)
+      : setFilteredPosts(filtered);
+  };
+
   const openModal = () => setModalOpen(true);
-  const closeModal = () => setModalOpen(false);
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingPostId(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const newPost = {
+      const postData = {
         ...formData,
         comments: [],
         createdAt: new Date().toISOString(),
       };
-      const response = await axios.post("http://localhost:3002/posts", newPost);
-      setPosts((prevPosts) => [...prevPosts, response.data]);
+
+      if (editingPostId) {
+        const response = await axios.put(
+          `http://localhost:3002/posts/${editingPostId}`,
+          postData
+        );
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.id === editingPostId ? response.data : post
+          )
+        );
+      } else {
+        const response = await axios.post(
+          "http://localhost:3002/posts",
+          postData
+        );
+        setPosts((prevPosts) => [...prevPosts, response.data]);
+      }
+
       setFormData({
         name: "",
         country: "",
@@ -141,9 +89,10 @@ const Display = () => {
         description: "",
         imageUrl: "",
       });
+      setEditingPostId(null);
       closeModal();
     } catch (error) {
-      console.error("Error adding post:", error);
+      console.error("Error saving post:", error);
     }
   };
 
@@ -151,7 +100,7 @@ const Display = () => {
     try {
       await axios.delete(`http://localhost:3002/posts/${postId}`);
       setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-      setDeletePostData(null); // Close the deletion confirmation modal
+      setDeletePostData(null);
     } catch (error) {
       console.error("Error deleting post:", error);
     }
@@ -167,45 +116,8 @@ const Display = () => {
 
   const handleEdit = (post) => {
     setFormData(post);
-    setEditPostData(post);
+    setEditingPostId(post.id);
     setModalOpen(true);
-  };
-
-  const handleCommentChange = (e) => {
-    setNewComment(e.target.value);
-  };
-
-  const handleAddComment = async (postId) => {
-    if (newComment.trim() === "") return;
-
-    const post = posts.find((p) => p.id === postId);
-    const updatedComments = [
-      ...post.comments,
-      { text: newComment, date: formatDate(new Date()) },
-    ];
-
-    try {
-      await axios.put(`http://localhost:3002/posts/${postId}`, {
-        ...post,
-        comments: updatedComments,
-      });
-
-      setPosts((prevPosts) =>
-        prevPosts.map((p) =>
-          p.id === postId ? { ...p, comments: updatedComments } : p
-        )
-      );
-      setNewComment("");
-    } catch (error) {
-      console.error("Error adding comment:", error);
-    }
-  };
-
-  const toggleComments = (postId) => {
-    setVisibleComments((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
   };
 
   const getInitialsAvatar = (name) => {
@@ -224,8 +136,13 @@ const Display = () => {
   const formatDate = (createdAt) => {
     const now = new Date();
     const createdDate = new Date(createdAt);
-    const timeDifference = now - createdDate;
 
+    if (isNaN(createdDate.getTime())) {
+      console.error("Invalid Date:", createdAt);
+      return "Invalid Date";
+    }
+
+    const timeDifference = now - createdDate;
     if (timeDifference < 86400000) {
       const hours = Math.floor(timeDifference / 3600000);
       const minutes = Math.floor((timeDifference % 3600000) / 60000);
@@ -237,158 +154,185 @@ const Display = () => {
         return "Just now";
       }
     } else {
-      return createdDate.toLocaleDateString();
+      return createdDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
+  };
+
+  const truncateDescription = (description, limit = 300) => {
+    if (description.length <= limit) return description;
+    return description.slice(0, limit) + "...";
+  };
+
+  const handleToggleDescription = (postId) => {
+    setExpandedDescriptions((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }));
   };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="relative flex flex-col min-h-screen">
-      <header className="bg-gray-200 text-black p-4 shadow-lg fixed top-0 left-0 right-0 z-10">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">My Blog</h1>
-        </div>
-      </header>
+    <>
+      <Header handleSearch={handleSearch} />
 
-      <div className="fixed top-60 right-20 transform -translate-y-1/2 bg-blue-500 text-white p-8 w-72 rounded-lg">
-        <h2 className="text-xl font-bold">About the Author</h2>
-        <p className="mt-2 text-m">
-          "Greetings, I am Abdullah Nafees. Welcome to my blog, a platform
-          dedicated to chronicling the extraordinary endeavors of individuals
-          who have profoundly impacted the world through their remarkable
-          achievements."
-        </p>
-      </div>
+      <AuthorInfo />
 
-      <main className="flex-1 flex flex-col items-center gap-20 pt-20 pb-10">
-        {posts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-white p-4 rounded-lg shadow-lg w-1/3 flex flex-col items-center relative"
-          >
-            <div className="flex items-center w-full mb-4">
-              {getInitialsAvatar("Abdullah Nafees")}
-              <div className="ml-2 text-gray-600 text-sm">
-                <div className="font-semibold">Abdullah Nafees</div>
-                <div>{formatDate(post.createdAt)}</div>
+      <div className="relative flex flex-col min-h-screen">
+        <main className="flex-1 flex flex-col items-center gap-20 pt-20 pb-10">
+          {filteredPosts.map((post) => (
+            <div
+              key={post.id}
+              className="bg-white p-4 rounded-lg shadow-lg w-1/3 flex flex-col items-center relative"
+            >
+              <div className="absolute top-5 right-4 flex space-x-2">
+                <FaEdit
+                  onClick={() => handleEdit(post)}
+                  className="text-blue-500 cursor-pointer"
+                />
+                <FaTrash
+                  onClick={() => openDeleteConfirmation(post)}
+                  className="text-red-500 cursor-pointer"
+                />
               </div>
-            </div>
-            <img
-              src={post.imageUrl || "https://via.placeholder.com/150"}
-              alt={post.name}
-              className="w-full h-64 object-cover rounded mb-4"
-            />
-            <h2 className="text-lg font-bold">{post.name}</h2>
-            <p>
-              <b>Country:</b> {post.country}
-            </p>
-            <p>
-              <b>Age:</b> {post.age}
-            </p>
-            <p>
-              <b>Description:</b> {post.description}
-            </p>
+              <div className="flex items-center w-full mb-4">
+                {getInitialsAvatar("Abdullah Nafees")}
+                <div className="ml-2 text-gray-600 text-sm">
+                  <div className="font-semibold">Abdullah Nafees</div>
+                  <div>{formatDate(post.createdAt)}</div>
+                </div>
+              </div>
 
-            <div className="w-full mt-4">
-              <h3 className="text-lg font-semibold text-blue-600 cursor-pointer text-center">
-                <span onClick={() => toggleComments(post.id)}> Comment</span>
-              </h3>
-              <div
-                className={`transition-all duration-500 overflow-hidden ${
-                  visibleComments[post.id] ? "max-h-96" : "max-h-0"
-                }`}
-              >
-                {visibleComments[post.id] && (
-                  <div className="mt-4">
-                    {post.comments && post.comments.length > 0 ? (
-                      post.comments.map((comment, index) => (
-                        <div key={index} className="mt-2">
-                          <p>{comment.text}</p>
-                          <span className="text-gray-500 text-sm">
-                            {comment.date}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No comments yet.</p>
-                    )}
-                    <textarea
-                      className="w-full mt-4 p-2 border rounded"
-                      rows="3"
-                      placeholder="Write a comment..."
-                      value={newComment}
-                      onChange={handleCommentChange}
+              <div className="post-card p-4 ">
+                {post.imageUrl ? (
+                  post.resourceType === "video" ? (
+                    <video
+                      controls
+                      className="w-full h-64 object-contain rounded mb-4"
+                    >
+                      <source src={post.imageUrl} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <img
+                      src={post.imageUrl || "https://via.placeholder.com/150"}
+                      alt={post.name}
+                      className="w-full h-64 object-contain rounded mb-4"
                     />
-                    <div className="flex justify-center w-full mt-2">
-                      <button
-                        className="bg-blue-500 text-white p-2 rounded"
-                        onClick={() => handleAddComment(post.id)}
-                      >
-                        Add Comment
-                      </button>
-                    </div>
+                  )
+                ) : (
+                  <div className="w-full h-64 bg-gray-300 rounded mb-4 flex items-center justify-center">
+                    No media uploaded
                   </div>
                 )}
+
+                <h2 className="text-lg font-bold">{post.name}</h2>
+                <p>
+                  <b>Country:</b> {post.country}
+                </p>
+                <p>
+                  <b>Age:</b> {post.age}
+                </p>
+                <div>
+                  <b>Description:</b>
+                  <p>
+                    {expandedDescriptions[post.id]
+                      ? post.description
+                      : truncateDescription(post.description)}
+                    {post.description.length > 300 && (
+                      <button
+                        onClick={() => handleToggleDescription(post.id)}
+                        className="text-blue-500"
+                      >
+                        {expandedDescriptions[post.id]
+                          ? "Show Less"
+                          : "Show More"}
+                      </button>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <CommentSection
+                postId={post.id}
+                comments={post.comments}
+                visibleComments={post.visibleComments}
+                toggleComments={(id) =>
+                  setPosts((prevPosts) =>
+                    prevPosts.map((post) =>
+                      post.id === id
+                        ? { ...post, visibleComments: !post.visibleComments }
+                        : post
+                    )
+                  )
+                }
+                formatDate={(date) => new Date(date).toLocaleString()}
+                handleAddComment={(id, newComment) =>
+                  setPosts((prevPosts) =>
+                    prevPosts.map((post) =>
+                      post.id === id
+                        ? {
+                            ...post,
+                            comments: [
+                              ...post.comments,
+                              { text: newComment, date: new Date() },
+                            ],
+                          }
+                        : post
+                    )
+                  )
+                }
+              />
+            </div>
+          ))}
+        </main>
+        <div className="fixed bottom-20 right-[5.5rem]">
+          <FaPlusCircle
+            onClick={openModal}
+            className="text-blue-500 cursor-pointer text-6xl"
+          />
+        </div>
+
+        {deletePostData && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-10 rounded-lg shadow-lg w-1/3">
+              <h3 className="text-xl font-semibold">
+                Are you sure you want to delete this post?
+              </h3>
+              <p className="mt-2">This action cannot be undone.</p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={closeDeleteConfirmation}
+                  className="bg-gray-300 px-4 py-2 rounded mr-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(deletePostData.id)}
+                  className="bg-red-500 text-white px-4 py-2 rounded"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-
-            {/* Edit and Delete Icons */}
-            <div className="absolute top-5 right-4 flex space-x-2">
-              <FaEdit
-                onClick={() => handleEdit(post)}
-                className="edit-icon text-blue-500 cursor-pointer text-l"
-              />
-              <FaTrash
-                onClick={() => openDeleteConfirmation(post)}
-                className="delete-icon text-red-500 cursor-pointer text-l"
-              />
-            </div>
           </div>
-        ))}
-      </main>
+        )}
 
-      {/* Deletion Confirmation Modal */}
-      {deletePostData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-            <h2 className="text-xl font-bold mb-4">
-              Are you sure you want to delete the post: "{deletePostData.name}"?
-            </h2>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={closeDeleteConfirmation}
-                className="bg-gray-300 px-4 py-2 rounded mr-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deletePostData.id)}
-                className="bg-red-500 text-white px-4 py-2 rounded"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <Modal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+          formData={formData}
+          setFormData={setFormData}
+        />
 
-      {/* Add Post Button */}
-      <FaPlusCircle
-        onClick={openModal}
-        className="fixed bottom-20 right-10 text-blue-500 text-6xl cursor-pointer hover:text-blue-700"
-      />
-
-      {/* Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onSubmit={handleSubmit}
-        formData={formData}
-        setFormData={setFormData}
-      />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
 };
 

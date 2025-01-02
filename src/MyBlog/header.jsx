@@ -17,6 +17,7 @@ const Header = ({ handleSearch, searchTerm }) => {
 
         recognitionRef.current.onstart = () => {
           setIsListening(true);
+          recognitionRef.stop();
         };
 
         recognitionRef.current.onresult = (event) => {
@@ -29,17 +30,15 @@ const Header = ({ handleSearch, searchTerm }) => {
 
           handleSearch(transcript);
           setIsListening(false);
-          recognitionRef.current.stop(); 
         };
 
         recognitionRef.current.onerror = () => {
           setIsListening(false);
-          recognitionRef.current.stop(); 
         };
 
         recognitionRef.current.onend = () => {
           setIsListening(false);
-          recognitionRef.current = null; 
+          recognitionRef.current = null;
         };
       } else {
         alert("Speech recognition is not supported in this browser.");
@@ -48,7 +47,7 @@ const Header = ({ handleSearch, searchTerm }) => {
     }
 
     if (!isListening) {
-      recognitionRef.current.start(); // Start recognition if not already listening
+      recognitionRef.current.start();
     }
   };
 
